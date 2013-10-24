@@ -20,6 +20,7 @@ Getting started
 
 4. Direct user to `http://path_to_opauth/tumblr` to authenticate
 
+5. Now that you have the user's token and token_secret, I recomend tumbler's [official php library][3] to create/edit/delete posts.
 
 Strategy configuration
 ----------------------
@@ -29,8 +30,8 @@ Required parameters:
 ```php
 <?php
 'Tumblr' => array(
-  'client_id' => 'YOUR CLIENT ID',
-  'client_secret' => 'YOUR CLIENT SECRET'
+  'consumer_key' => 'YOUR CLIENT ID',
+  'consumer_secret' => 'YOUR CLIENT SECRET'
 )
 ```
 
@@ -41,7 +42,7 @@ For `scope`, separate each scopes with a space(' ') and not a plus sign ('+'). E
 
 References
 ----------
-- http://www.tumblr.com/docs/en/api/v2#auth)
+- http://www.tumblr.com/docs/en/api/v2#auth
 
 License
 ---------
@@ -50,3 +51,4 @@ Copyright © 2013 Benjamin Bjurstrom ([@benbjurstrom][2])
 
 [1]: https://github.com/opauth/opauth
 [2]: http://twitter.com/benbjurstrom
+[3]: https://github.com/tumblr/tumblr.php
