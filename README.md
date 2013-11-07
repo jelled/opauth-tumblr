@@ -20,7 +20,7 @@ Getting started
 
 4. Direct user to `http://path_to_opauth/tumblr` to authenticate
 
-5. Now that you have the user's token and token_secret, I recomend tumbler's [official php library][3] to create/edit/delete posts.
+5. Now that you have the user's token and token_secret, use them with tumbler's [official php library][3] to create/edit/delete posts.
 
 Strategy configuration
 ----------------------

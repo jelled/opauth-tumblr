@@ -81,7 +81,9 @@ class TumblrOAuth {
     }
     $request = $this->oAuthRequest($this->requestTokenURL(), 'GET', $parameters);
     $token = OAuthUtil::parse_parameters($request);
-    $this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
+     if (isset($token['oauth_token'])) {
+        $this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
+     }
     return $token;
   }
 
@@ -114,10 +116,14 @@ class TumblrOAuth {
     $parameters = array();
     if (!empty($oauth_verifier)) {
       $parameters['oauth_verifier'] = $oauth_verifier;
+    }else{
+        return 'Oauth Verifier not found';
     }
     $request = $this->oAuthRequest($this->accessTokenURL(), 'GET', $parameters);
     $token = OAuthUtil::parse_parameters($request);
-    $this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
+    if(isset($token['oauth_token'])){
+        $this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
+    }
     return $token;
   }
 
