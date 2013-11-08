@@ -25,17 +25,15 @@ class TumblrStrategy extends OpauthStrategy
 
         if (!isset($_SESSION)) session_start();
 
-        //instantiate tumblr object and check whether we already have an oauth_token
+        //check if oauth_token is present in the session
         if(empty($_SESSION['_opauth_tumblr']['oauth_token'])){
-            //initial run goes here
             $this->tum_oauth = new TumblrOAuth\TumblrOAuth($this->strategy['consumer_key'], $this->strategy['consumer_secret']);
         }else{
-            //On the callback we have an oauth tokens so include them when instantiating tum_oauth object.
+            //On the callback oauth tokens are present in the session and need to be included when instantiating the TumblrOAuth object.
             $this->tum_oauth = new TumblrOAuth\TumblrOAuth($this->strategy['consumer_key'], $this->strategy['consumer_secret'], $_SESSION['_opauth_tumblr']['oauth_token'], $_SESSION['_opauth_tumblr']['oauth_token_secret']);
 
-            //clear _opauth_tumblr session data now that we've hit the callback
+            //reset the _opauth_tumblr session data.
             unset($_SESSION['_opauth_tumblr']);
-
         }
 
     }
@@ -56,7 +54,10 @@ class TumblrStrategy extends OpauthStrategy
     );
 
     /**
-     * Auth request
+     * Oauth request
+     *
+     * Generates a request token and redirects the user to tumblr's site for
+     * authentication.
      */
     public function request()
     {
@@ -65,40 +66,68 @@ class TumblrStrategy extends OpauthStrategy
         //generate request token
         $request_token = $this->tum_oauth->getRequestToken($callback_url);
         if(!empty($request_token['oauth_token'])){
+            //save the request token in a session as it will be needed again after the callback.
             $_SESSION['_opauth_tumblr'] = $request_token;
 
             $url = 'http://www.tumblr.com/oauth/authorize?oauth_token=' . $request_token['oauth_token'];
 
-            //load url
             $this->redirect($url);
         }else{
-            $error = array(
-                'provider' => 'Tumblr',
-                'code' => 'oauth_token_error',
-                'message' => 'Failed when attempting to obtain oauth token',
-                'raw' => array(
-                    'headers' => $this->tum_oauth->http_header,
-                    'response' => $request_token,
-                    'http_info' => $this->tum_oauth->http_info,
-                )
-            );
-
-            $this->errorCallback($error);
+            $this->send_error('Failed when attempting to obtain request token', $this->tum_oauth->http_header, $request_token, $this->tum_oauth->http_info);
         }
 
     }
 
     /**
-     * Internal callback, after Tumblr's OAuth
+     * Oauth Callback
+     *
+     * After the user authenticates at http://www.tumblr.com/oauth/authorize
+     * tumblr redirects them to the default callback URL. Opauth then
+     * calls this method.
      */
     public function oauth_callback()
     {
         $access_token = $this->get_access_token($_REQUEST['oauth_verifier']);
 
-        $response = $this->get_user_info();
+        $user_raw = $this->get_user_info();
 
-        $user = $response->response->user;
+        $user = $user_raw->response->user;
 
+        $this->send_success($user, $access_token, $user_raw);
+    }
+
+    /**
+     * Get Access Token
+     *
+     * Request a tumblr access token for the authenticated user.
+     */
+    private function get_access_token($oauth_verifier){
+        $access_token = $this->tum_oauth->getAccessToken($oauth_verifier);
+
+        if(!empty($access_token['oauth_token'])){
+            return $access_token;
+        } else {
+            $this->send_error('Failed when attempting to obtain access token', $this->tum_oauth->http_header, $access_token, $this->tum_oauth->http_info);
+        }
+    }
+
+    /**
+     * Get User Info
+     *
+     * Using the access token, request the user's tumblr account information.
+     */
+    private function get_user_info()
+    {
+        $response = $this->tum_oauth->get('http://api.tumblr.com/v2/user/info');
+
+        if (!empty($response->meta) && $response->meta->status == 200) {
+            return $response;
+        } else {
+            $this->send_error('Failed when attempting to lookup user info', $this->tum_oauth->http_header, $response, $this->tum_oauth->http_info);
+        }
+    }
+
+    private function send_success($user, $access_token, $raw){
         $this->auth = array(
             'provider' => 'Tumblr',
             'uid' => $user->name,
@@ -113,54 +142,27 @@ class TumblrStrategy extends OpauthStrategy
                 'token' => $access_token['oauth_token'],
                 'secret' => $access_token['oauth_token_secret']
             ),
-            'raw' => $response
+            'raw' => $raw
         );
 
+        //opauth success callback
         $this->callback();
     }
 
-    private function get_access_token($oauth_verifier){
-        $access_token = $this->tum_oauth->getAccessToken($oauth_verifier);
+    private function send_error($message, $headers, $response, $http_info){
+        $error = array(
+            'provider' => 'Tumblr',
+            'code' => 'oauth_token_error',
+            'message' => $message,
+            'raw' => array(
+                'headers' => $headers,
+                'response' => $response,
+                'http_info' => $http_info
+            )
+        );
 
-        if(!empty($access_token['oauth_token'])){
-            return $access_token;
-        } else {
-            sleep(1);
-            $error = array(
-                'provider' => 'Tumblr',
-                'code' => 'oauth_token_error',
-                'message' => 'Failed when attempting to obtain oauth token',
-                'raw' => array(
-                    'headers' => $this->tum_oauth->http_header,
-                    'response' => $access_token,
-                    'http_info' => $this->tum_oauth->http_header,
-                )
-            );
-
-            $this->errorCallback($error);
-        }
-    }
-
-    private function get_user_info()
-    {
-        $response = $this->tum_oauth->get('http://api.tumblr.com/v2/user/info');
-
-        if (!empty($response->meta) && $response->meta->status == 200) {
-            return $response;
-        } else {
-            $error = array(
-                'provider' => 'Tumblr',
-                'code' => 'oauth_token_error',
-                'message' => 'Failed when attempting to obtain oauth token',
-                'raw' => array(
-                    'headers' => $this->tum_oauth->http_header,
-                    'response' => $request_token,
-                    'http_info' => $this->tum_oauth->http_info,
-                )
-            );
-
-            $this->errorCallback($error);
-        }
+        //opauth error callback
+        $this->errorCallback($error);
     }
 
 }

@@ -14,11 +14,11 @@ Getting started
    git clone git://github.com/jelled/opauth-tumblr.git Tumblr
    ```
 
-2. Create a Tumblr application at http://www.tumblr.com/oauth/apps
+2. Create a Tumblr application at http://www.tumblr.com/oauth/apps and set http://[path_to_opauth]/tumblr/oauth_callback as your default callback URL.
 
 3. Configure Opauth-Tumblr strategy.
 
-4. Direct user to `http://path_to_opauth/tumblr` to authenticate
+4. Direct user to `http://[path_to_opauth]/tumblr` to authenticate
 
 5. Now that you have the user's token and token_secret, use them with tumbler's [official php library][3] to create/edit/delete posts.
 
